@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import authService from '../appwrite/auth';
 import { useNavigate } from 'react-router-dom';
 import {Spinner} from "@heroui/spinner";
+import { backendUrl } from '../config';
+// import { registrationdata } from '../../../backend/controllers/db.controller';
 
 const Auth = () => {
   const [activeTab, setActiveTab] = useState('login');
@@ -14,7 +16,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
 
   const handleMobileNumberChange = (e) => {
@@ -57,6 +59,29 @@ const Auth = () => {
       password: password,
       name: username
     });
+
+    const res = await fetch(`${backendUrl}/registrationdata`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: username,
+        email: mobileNumber + '@dailyspend.com',
+        password: password,
+        appwrite_id: response.$id
+      })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('Error registering user:', errorData);
+      setIsLoading(false);
+      return;
+    }
+    const responseData = await res.json();
+    console.log('User registered:', responseData);
+    // Assuming the registration was successful, navigate to home
 
     console.log('Register with:', response);
     navigate('/home');
