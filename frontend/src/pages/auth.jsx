@@ -1,6 +1,9 @@
 // The exported code uses Tailwind CSS. Install Tailwind CSS in your dev environment to ensure all styles work.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import authService from '../appwrite/auth';
+import { useNavigate } from 'react-router-dom';
+import {Spinner} from "@heroui/spinner";
 
 const Auth = () => {
   const [activeTab, setActiveTab] = useState('login');
@@ -10,6 +13,9 @@ const Auth = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
 
   const handleMobileNumberChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -26,16 +32,35 @@ const Auth = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     // Login logic would be implemented here
-    console.log('Login with:', { mobileNumber, password });
+
+    const response = await authService.login({
+      email: mobileNumber + '@dailyspend.com',
+      password: password
+    });
+
+    console.log('Login with:', response);
+    navigate('/home');
+    setIsLoading(false);
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     // Registration logic would be implemented here
-    console.log('Register with:', { mobileNumber, username, password, confirmPassword });
+
+   const response = await authService.createAccount({
+      email: mobileNumber + '@dailyspend.com',
+      password: password,
+      name: username
+    });
+
+    console.log('Register with:', response);
+    navigate('/home');
+    setIsLoading(false);
   };
 
   const getPasswordStrength = () => {
@@ -53,17 +78,34 @@ const Auth = () => {
     return '';
   };
 
+  useEffect(() => {
+    const checkUser = async () => {
+        try {
+            const user = await authService.getCurrentUser();
+            if (user) {
+                navigate('/home');
+                console.log('user', user);
+            }
+        } catch (error) {
+            console.error('Error checking user:', error);
+        }
+    };
+    
+    checkUser();
+  }, []);
+
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Nav Bar */}
       <div className="fixed top-0 w-full bg-white shadow-md z-10 px-4 py-3 flex items-center justify-center">
-        <h1 className="text-xl font-semibold text-blue-600">FamSpend</h1>
+        <h1 className="text-xl font-semibold text-blue-600">DailySpend</h1>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 mt-14 mb-16 px-4 py-6 max-w-md mx-auto w-full">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to FamSpend!</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to DailySpend!</h2>
           <p className="text-gray-600">Track your family expenses with ease</p>
         </div>
 
@@ -90,6 +132,12 @@ const Auth = () => {
             Register
           </button>
         </div>
+
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Spinner classNames={{label: "text-foreground mt-4"}} variant="wave" color="primary" size="md" label="Processing..." />
+          </div>
+        )}
 
         {/* Login Form */}
         {activeTab === 'login' && (
