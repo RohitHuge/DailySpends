@@ -1,9 +1,9 @@
-// The exported code uses Tailwind CSS. Install Tailwind CSS in your dev environment to ensure all styles work.
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronUp, faChevronDown, faHome, faUsers, faChartBar } from '@fortawesome/free-solid-svg-icons';
 import authService from '../appwrite/auth';
 import { useNavigate } from 'react-router-dom';
+import { backendUrl } from '../config'; 
 
 const Home = () => {
   const navigate = useNavigate();
@@ -14,6 +14,9 @@ const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  const [expenses, setExpenses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
 
   // Categories with emojis
   const categories = [
@@ -36,73 +39,113 @@ const Home = () => {
   ];
 
   // Sample expense data
-  const expenses = [
-    {
-      id: 1,
-      date: 'June 7, 2025 • 10:30 AM',
-      amount: 120,
-      category: { id: 'milk', emoji: '🥛', name: 'Milk' },
-      paymentType: 'cash',
-      bank: null,
-      user: 'John'
-    },
-    {
-      id: 2,
-      date: 'June 6, 2025 • 2:15 PM',
-      amount: 450,
-      category: { id: 'grocery', emoji: '🛒', name: 'Grocery' },
-      paymentType: 'debit',
-      bank: { id: 'hdfc', emoji: '💳', name: 'HDFC' },
-      user: 'Sarah'
-    },
-    {
-      id: 3,
-      date: 'June 6, 2025 • 11:45 AM',
-      amount: 250,
-      category: { id: 'fastfood', emoji: '🍔', name: 'Fast Food' },
-      paymentType: 'cash',
-      bank: null,
-      user: 'Michael'
-    },
-    {
-      id: 4,
-      date: 'June 5, 2025 • 6:20 PM',
-      amount: 80,
-      category: { id: 'bread', emoji: '🍞', name: 'Bread' },
-      paymentType: 'cash',
-      bank: null,
-      user: 'Emily'
-    },
-    {
-      id: 5,
-      date: 'June 5, 2025 • 4:10 PM',
-      amount: 350,
-      category: { id: 'veggies', emoji: '🥦', name: 'Veggies' },
-      paymentType: 'debit',
-      bank: { id: 'sbi', emoji: '🏦', name: 'SBI' },
-      user: 'David'
-    },
-    {
-      id: 6,
-      date: 'June 4, 2025 • 9:30 AM',
-      amount: 500,
-      category: { id: 'travel', emoji: '🚕', name: 'Travel' },
-      paymentType: 'debit',
-      bank: { id: 'icici', emoji: '🏛️', name: 'ICICI' },
-      user: 'Jessica'
-    },
-  ];
+  // const expenses = [
+  //   {
+  //     id: 1,
+  //     date: 'June 7, 2025 • 10:30 AM',
+  //     amount: 120,
+  //     category: { id: 'milk', emoji: '🥛', name: 'Milk' },
+  //     paymentType: 'cash',
+  //     bank: null,
+  //     user: 'John'
+  //   },
+  //   {
+  //     id: 2,
+  //     date: 'June 6, 2025 • 2:15 PM',
+  //     amount: 450,
+  //     category: { id: 'grocery', emoji: '🛒', name: 'Grocery' },
+  //     paymentType: 'debit',
+  //     bank: { id: 'hdfc', emoji: '💳', name: 'HDFC' },
+  //     user: 'Sarah'
+  //   },
+  //   {
+  //     id: 3,
+  //     date: 'June 6, 2025 • 11:45 AM',
+  //     amount: 250,
+  //     category: { id: 'fastfood', emoji: '🍔', name: 'Fast Food' },
+  //     paymentType: 'cash',
+  //     bank: null,
+  //     user: 'Michael'
+  //   },
+  //   {
+  //     id: 4,
+  //     date: 'June 5, 2025 • 6:20 PM',
+  //     amount: 80,
+  //     category: { id: 'bread', emoji: '🍞', name: 'Bread' },
+  //     paymentType: 'cash',
+  //     bank: null,
+  //     user: 'Emily'
+  //   },
+  //   {
+  //     id: 5,
+  //     date: 'June 5, 2025 • 4:10 PM',
+  //     amount: 350,
+  //     category: { id: 'veggies', emoji: '🥦', name: 'Veggies' },
+  //     paymentType: 'debit',
+  //     bank: { id: 'sbi', emoji: '🏦', name: 'SBI' },
+  //     user: 'David'
+  //   },
+  //   {
+  //     id: 6,
+  //     date: 'June 4, 2025 • 9:30 AM',
+  //     amount: 500,
+  //     category: { id: 'travel', emoji: '🚕', name: 'Travel' },
+  //     paymentType: 'debit',
+  //     bank: { id: 'icici', emoji: '🏛️', name: 'ICICI' },
+  //     user: 'Jessica'
+  //   },
+  // ];
 
   // Filter options
   const filterOptions = ['All', 'Cash', 'Debit', 'Today', 'This Week'];
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add expense logic would go here
-    setAmount('');
-    setSelectedCategory('');
-    setSelectedBank('');
+    
+    if (!amount || !selectedCategory) {
+      alert('Please fill all required fields');
+      return;
+    }
+  
+    try {
+      // Get current user
+      const user = await authService.getCurrentUser();
+      
+      // Create transaction payload
+      const transaction = {
+        amount: parseFloat(amount),
+        category: selectedCategory,
+        payment_type: paymentType,
+        bank: paymentType === 'debit' ? selectedBank : null,
+        appwrite_id: user.$id // Using Appwrite ID
+      };
+  
+      // Send to backend
+      const response = await fetch(`${backendUrl}/addtransaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${await authService.getJWT()}`
+        },
+        body: JSON.stringify(transaction)
+      });
+  
+      if (!response.ok) throw new Error('Failed to add transaction');
+  
+      // Reset form
+      setAmount('');
+      setSelectedCategory('');
+      setSelectedBank('');
+      
+      // Refresh expenses list
+      // You'll need to implement fetchExpenses() function
+      // await fetchExpenses();
+  
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      alert('Failed to add expense. Please try again.');
+    }
   };
 
   const handleAnalytics = async () => {
@@ -111,21 +154,53 @@ const Home = () => {
     navigate('/');
   };
 
+  // Fetch expenses from backend
+  const fetchExpenses = async () => {
+    try {
+      setIsLoading(true);
+  
+      const user = await authService.getCurrentUser();
+      const res = await fetch(`${backendUrl}/transactions`);
+      const data = await res.json();
+  
+      // Convert category and bank fields to match UI shape
+      const transformed = data.map((txn) => ({
+        id: txn.id,
+        date: new Date(txn.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        amount: txn.amount,
+        category: categories.find((c) => c.id === txn.category) || { id: txn.category, emoji: '📝', name: txn.category },
+        paymentType: txn.payment_type,
+        bank: txn.bank ? banks.find((b) => b.id === txn.bank) : null,
+        user: txn.username || 'You' // Replace with real name if available
+      }));
+  
+      setExpenses(transformed);
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
   useEffect(() => {
     const checkUser = async () => {
-        try {
-            const user = await authService.getCurrentUser();
-            if (!user) {
-                navigate('/');
-            }
-        } catch (error) {
-            console.error('Error checking user:', error);
-            navigate('/');
+      try {
+        const user = await authService.getCurrentUser();
+        if (!user) {
+          navigate('/');
+        } else {
+          await fetchExpenses(); // 🔁 Fetch on load
         }
+      } catch (error) {
+        console.error('Error checking user:', error);
+        navigate('/');
+      }
     };
-    
+  
     checkUser();
   }, []);
+  
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 max-w-[400px] mx-auto relative">
@@ -259,31 +334,35 @@ const Home = () => {
         </div>
         {/* Expense list */}
         <div className="divide-y divide-gray-100">
+          {isLoading && (
+            <div className="p-4 text-center text-gray-500">
+              Loading expenses...
+            </div>
+          )}
+
           {expenses.map((expense) => (
             <div key={expense.id} className="p-4 bg-white">
               <div className="flex justify-between items-start mb-1">
-                <span className="text-xs text-gray-500">{expense.date}</span>
-                <span className="font-medium text-gray-900">₹{expense.amount}</span>
+          <span className="text-xs text-gray-500">{expense.date}</span>
+          <span className="font-medium text-gray-900">₹{expense.amount}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="mr-2">
-                    {expense.category.emoji}
-                  </span>
-                  <span className="text-sm text-gray-700">{expense.category.name}</span>
-                  <span className="mx-2 text-gray-300">•</span>
-                  <span className="text-sm text-gray-700">
-                    {expense.paymentType === 'cash' ? '💵' : '💳'}
-                    {expense.bank && ` ${expense.bank.name}`}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">👤 {expense.user}</span>
+          <div className="flex items-center">
+            <span className="mr-2">{expense.category.emoji}</span>
+            <span className="text-sm text-gray-700">{expense.category.name}</span>
+            <span className="mx-2 text-gray-300">•</span>
+            <span className="text-sm text-gray-700">
+              {expense.paymentType === 'cash' ? '💵' : '💳'}
+              {expense.bank && ` ${expense.bank.name}`}
+            </span>
+          </div>
+          <span className="text-xs text-gray-500">👤 {expense.user}</span>
               </div>
             </div>
           ))}
         </div>
-      </div>
-      {/* Spending Summary */}
+            </div>
+            {/* Spending Summary */}
       <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-b border-gray-200 px-4 py-2 shadow-sm max-w-[400px] mx-auto">
         <div className="flex space-x-3">
           <div className="flex-1 bg-blue-50 rounded-lg p-2 border border-blue-100">

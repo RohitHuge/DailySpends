@@ -19,6 +19,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
 
 
+
   const handleMobileNumberChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 10) {
@@ -69,7 +70,7 @@ const Auth = () => {
         username: username,
         email: mobileNumber + '@dailyspend.com',
         password: password,
-        appwrite_id: response.$id
+        appwrite_id: response.userId
       })
     });
 
