@@ -506,10 +506,11 @@ useEffect(() => {
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 max-w-[375px] mx-auto">
         <div className="grid grid-cols-3 h-16">
-            onClick = {handleBack}
+            <button onClick = {handleBack} className="flex flex-col items-center justify-center text-blue-600 cursor-pointer">
             <i className="fas fa-home text-lg"></i>
             <span className="text-xs mt-1">Home</span>
-                    <button className="flex flex-col items-center justify-center text-blue-600 cursor-pointer">
+          </button>
+            <button  className="flex flex-col items-center justify-center text-blue-600 cursor-pointer">
             <i className="fas fa-users text-lg"></i>
             <span className="text-xs mt-1">Family</span>
           </button>

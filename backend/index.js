@@ -31,5 +31,5 @@ connectDB()
 
 import registrationRoutes from './routes.js';
 // Routes
-app.use('/api', registrationRoutes);
+app.use('/api',registrationRoutes);
 

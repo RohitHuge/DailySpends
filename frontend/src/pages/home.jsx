@@ -164,7 +164,6 @@ const Home = () => {
   const fetchExpenses = async () => {
     try {
       setIsLoading(true);
-  
       const res = await fetch(`${backendUrl}/transactions`);
       const data = await res.json();
       const res2 = await fetch(`${backendUrl}/summarydata`, {
@@ -340,7 +339,7 @@ const Home = () => {
       {/* Expense Log */}
       <div className="flex-1 overflow-y-auto pb-32">
         {/* Filter options */}
-        <div className="px-4 py-3 sticky top-0 bg-gray-50 z-10 border-b">
+        {/* <div className="px-4 py-3 sticky top-0 bg-gray-50 z-10 border-b">
           <div className="flex overflow-x-auto space-x-2 pb-1 -mx-1 px-1">
             {filterOptions.map((filter) => (
               <button
@@ -356,7 +355,7 @@ const Home = () => {
               </button>
             ))}
           </div>
-        </div>
+        </div> */}
         {/* Expense list */}
         <div className="divide-y divide-gray-100">
           {isLoading && (
