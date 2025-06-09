@@ -52,7 +52,13 @@ export const addtransaction = async (req, res) => {
 export const transactions = async (req, res) => {
     try {
       const result = await req.pool.query(
-        `SELECT * FROM transactions ORDER BY created_at DESC LIMIT 100`
+       ` SELECT 
+        transactions.*, 
+        users.username 
+      FROM transactions
+      LEFT JOIN users ON transactions.user_id = users.appwrite_id
+      ORDER BY transactions.created_at DESC
+      LIMIT 100`
       );
   
       res.status(200).json(result.rows);
