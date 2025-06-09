@@ -383,7 +383,7 @@ const Auth = () => {
       </div>
 
       {/* Tab Bar */}
-      <div className="fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-200 grid grid-cols-4 py-2">
+      {/* <div className="fixed bottom-0 w-full bg-white shadow-lg border-t border-gray-200 grid grid-cols-4 py-2">
         <div className="flex flex-col items-center justify-center cursor-pointer">
           <i className="fas fa-home text-blue-600"></i>
           <span className="text-xs mt-1 text-gray-600">Home</span>
@@ -400,7 +400,7 @@ const Auth = () => {
           <i className="fas fa-user text-gray-400"></i>
           <span className="text-xs mt-1 text-gray-600">Profile</span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

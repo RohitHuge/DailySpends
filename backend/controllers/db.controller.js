@@ -67,3 +67,60 @@ export const transactions = async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch transactions' });
     }
   };
+
+export const updateSummaryDates = async (req, res) => {
+  try {
+    const { cashDiary, debitDiary, family_id } = req.body;
+    
+    // Update the summary_dates table
+    await req.pool.query(
+      `UPDATE families
+       SET last_cash_log_date = $1, last_debit_log_date = $2
+       WHERE family_id = $3`,
+      [cashDiary, debitDiary, family_id]
+    );
+  
+      res.status(200).json({ message: 'Log dates updated successfully' });
+    } catch (error) {
+      console.error('Error updating log dates:', error);
+      res.status(500).json({ error: 'Failed to update log dates' });
+    }
+}
+
+export const summarydata = async (req, res) => {
+  try {
+    const { family_id } = req.body;
+    const cashTotal = await req.pool.query(
+      `SELECT SUM(amount)
+      FROM transactions
+      WHERE payment_type = 'cash'
+      AND created_at > (SELECT last_cash_log_date FROM families WHERE family_id = $1)`,
+      [family_id]
+    );
+
+    const debitTotal = await req.pool.query(
+      `SELECT SUM(amount)
+      FROM transactions
+      WHERE payment_type = 'debit'
+      AND created_at > (SELECT last_debit_log_date FROM families WHERE family_id = $1)`,
+      [family_id]
+    );
+
+    const lastCashLogDate = await req.pool.query(
+      `SELECT last_cash_log_date FROM families WHERE family_id = $1`,
+      [family_id]
+    );
+
+    const lastDebitLogDate = await req.pool.query(
+      `SELECT last_debit_log_date FROM families WHERE family_id = $1`,
+      [family_id]
+    );
+    
+    res.status(200).json({ 
+      cashTotal: cashTotal.rows[0].sum, debitTotal: debitTotal.rows[0].sum,
+       lastCashLogDate: lastCashLogDate.rows[0].last_cash_log_date, lastDebitLogDate: lastDebitLogDate.rows[0].last_debit_log_date });
+  } catch (error) {
+    console.error('Error fetching summary data:', error);
+    res.status(500).json({ error: 'Failed to fetch summary data' });
+  }
+}

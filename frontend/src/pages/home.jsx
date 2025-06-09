@@ -16,6 +16,12 @@ const Home = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    cashTotal: 0,
+    debitTotal: 0,
+    lastCashLogDate: null,
+    lastDebitLogDate: null,
+  });
 
 
   // Categories with emojis
@@ -159,9 +165,24 @@ const Home = () => {
     try {
       setIsLoading(true);
   
-      const user = await authService.getCurrentUser();
       const res = await fetch(`${backendUrl}/transactions`);
       const data = await res.json();
+      const res2 = await fetch(`${backendUrl}/summarydata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ family_id: '11111111-1111-1111-1111-111111111111' })
+      });
+      const data2 = await res2.json();
+      // setSummary(data2);
+      setSummary({
+        cashTotal : data2.cashTotal,
+        debitTotal : data2.debitTotal,
+        lastCashLogDate: new Date(data2.lastCashLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+        lastDebitLogDate: new Date(data2.lastDebitLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+      });
+      console.log("Summary", data2);
   
       // Convert category and bank fields to match UI shape
       const transformed = data.map((txn) => ({
@@ -181,6 +202,10 @@ const Home = () => {
       setIsLoading(false);
     }
   };
+
+  const handleFamily = () => {
+    navigate('/profile');
+  }
   
 
   useEffect(() => {
@@ -367,14 +392,14 @@ const Home = () => {
         <div className="flex space-x-3">
           <div className="flex-1 bg-blue-50 rounded-lg p-2 border border-blue-100">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500">💵 Cash Total (since May 22)</span>
-              <span className="font-medium text-blue-600">₹950</span>
+              <span className="text-xs text-gray-500">💵 Cash Total (since {summary.lastCashLogDate})</span>
+              <span className="font-medium text-blue-600">₹{summary.cashTotal}</span>
             </div>
           </div>
           <div className="flex-1 bg-green-50 rounded-lg p-2 border border-green-100">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500">💳 Debit Total (since May 25)</span>
-              <span className="font-medium text-green-600">₹1,300</span>
+              <span className="text-xs text-gray-500">💳 Debit Total (since {summary.lastDebitLogDate})</span>
+              <span className="font-medium text-green-600">₹{summary.debitTotal}</span>
             </div>
           </div>
         </div>
@@ -386,7 +411,7 @@ const Home = () => {
             <FontAwesomeIcon icon={faHome} className="text-lg" />
             <span className="text-xs mt-1">Home</span>
           </button>
-          <button className="flex flex-col items-center justify-center text-gray-500 cursor-pointer">
+          <button onClick = {handleFamily}className="flex flex-col items-center justify-center text-gray-500 cursor-pointer">
             <FontAwesomeIcon icon={faUsers} className="text-lg" />
             <span className="text-xs mt-1">Family</span>
           </button>
