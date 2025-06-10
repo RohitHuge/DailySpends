@@ -18,6 +18,7 @@ const Home = () => {
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [otherCategory, setOtherCategory] = useState('');
   const [summary, setSummary] = useState({
     cashTotal: 0,
     debitTotal: 0,
@@ -55,7 +56,7 @@ const Home = () => {
     e.preventDefault();
     setIsUpdating(true);
     
-    if (!amount || !selectedCategory) {
+    if (!amount && !selectedCategory && !otherCategory) {
       alert('Please fill all required fields');
       return;
     }
@@ -63,14 +64,17 @@ const Home = () => {
     try {
       // Get current user
       const user = await authService.getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
       
       // Create transaction payload
       const transaction = {
         amount: parseFloat(amount),
-        category: selectedCategory,
+        category: paymentType === 'phonepe' ? otherCategory : selectedCategory,
         payment_type: paymentType,
-        bank: paymentType === 'debit' ? selectedBank : null,
-        appwrite_id: user.$id // Using Appwrite ID
+        bank: paymentType !== 'cash' ? selectedBank : null,
+        appwrite_id: user.$id // Add the appwrite_id from the current user
       };
   
       // Send to backend
@@ -98,7 +102,6 @@ const Home = () => {
         bank: transaction.bank ? banks.find((b) => b.id === transaction.bank) : null,
         user: 'You' 
       }, ...expenses]);
-      
       
       // Reset form
       setAmount('');
@@ -140,7 +143,6 @@ const Home = () => {
         lastCashLogDate: new Date(data2.lastCashLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
         lastDebitLogDate: new Date(data2.lastDebitLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
       });
-      console.log("Summary", data2);
   
       // Convert category and bank fields to match UI shape
       const transformed = data.map((txn) => ({
@@ -164,6 +166,16 @@ const Home = () => {
   const handleFamily = () => {
     navigate('/profile');
   }
+
+const handleCategorySelect = (categoryId) => {
+  if (categoryId === 'phonepe') {
+    setPaymentType('phonepe');
+    setSelectedCategory('');
+  } else {
+    setSelectedCategory(categoryId);
+    setPaymentType('cash');
+  }
+ };
   
 
   useEffect(() => {
@@ -255,7 +267,7 @@ const Home = () => {
                         ? 'bg-blue-100 text-blue-600 border border-blue-200'
                         : 'bg-gray-100 text-gray-600 border border-gray-200'
                     }`}
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => handleCategorySelect(category.id)}
                   >
                     <div className="flex flex-col items-center">
                       <span className="text-lg">{category.emoji}</span>
@@ -266,15 +278,17 @@ const Home = () => {
               </div>
               <div className="relative">
                 <input
+                  id="other-expense-category"
                   type="text"
                   placeholder="Other expense category"
                   className="w-full pl-8 pr-3 py-2 border-none bg-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  value={otherCategory}
+                  onChange={(e) => setOtherCategory(e.target.value)}
                 />
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">📝</span>
               </div>
             </div>
-            {paymentType === 'debit' && (
+            {(paymentType === 'debit' || paymentType === 'phonepe') && (
               <div className="mb-3 overflow-x-auto pb-1 -mx-1 px-1">
                 <div className="flex space-x-2 min-w-max">
                   {banks.map((bank) => (
@@ -331,26 +345,27 @@ const Home = () => {
             </div>
           )}
 
-          {expenses.map((expense) => (
-            <div key={expense.id} className="p-4 bg-white">
-              <div className="flex justify-between items-start mb-1">
-          <span className="text-xs text-gray-500">{expense.date}</span>
-          <span className="font-medium text-gray-900">₹{expense.amount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <span className="mr-2">{expense.category.emoji}</span>
-            <span className="text-sm text-gray-700">{expense.category.name}</span>
-            <span className="mx-2 text-gray-300">•</span>
-            <span className="text-sm text-gray-700">
-              {expense.paymentType === 'cash' ? '💵' : '💳'}
-              {expense.bank && ` ${expense.bank.name}`}
-            </span>
-          </div>
-          <span className="text-xs text-gray-500">👤 {expense.user}</span>
-              </div>
-            </div>
-          ))}
+{expenses.map((expense) => (
+  <div key={expense.id} className="p-4 bg-white"> {/* Add key here */}
+    <div className="flex justify-between items-start mb-1">
+      <span className="text-xs text-gray-500">{expense.date}</span>
+      <span className="font-medium text-gray-900">₹{expense.amount}</span>
+    </div>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <span className="mr-2">{expense.category.emoji}</span>
+        <span className="text-sm text-gray-700">{expense.category.name}</span>
+        <span className="mx-2 text-gray-300">•</span>
+        <span className="text-sm text-gray-700">
+          {expense.paymentType === 'cash' ? '💵' : 
+           expense.paymentType === 'debit' ? '💳' : '📱'}
+          {expense.bank && ` ${expense.bank.name}`}
+        </span>
+      </div>
+      <span className="text-xs text-gray-500">👤 {expense.user}</span>
+    </div>
+  </div>
+))}
         </div>
             </div>
             {/* Spending Summary */}
