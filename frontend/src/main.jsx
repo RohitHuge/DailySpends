@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import '@fortawesome/fontawesome-free/css/all.min.css'
-
+import { AuthProvider } from './context.jsx'
 // Import FontAwesome core
 import { library } from '@fortawesome/fontawesome-svg-core'
 // Import the icons you want to use
@@ -13,5 +13,7 @@ import { faChevronUp, faChevronDown, faHome, faUsers, faChartBar } from '@fortaw
 library.add(faChevronUp, faChevronDown, faHome, faUsers, faChartBar)
 
 createRoot(document.getElementById('root')).render(
+        <AuthProvider>
         <App />
+        </AuthProvider>
 )

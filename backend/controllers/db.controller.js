@@ -124,3 +124,5 @@ export const summarydata = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch summary data' });
   }
 }
+
+

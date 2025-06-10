@@ -4,10 +4,11 @@ import { faChevronUp, faChevronDown, faHome, faUsers, faChartBar } from '@fortaw
 import authService from '../appwrite/auth';
 import { useNavigate } from 'react-router-dom';
 import { backendUrl } from '../config'; 
-
+import { useAuth } from '../context';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user, setUser } = useAuth();
   // State for expense form
   const [isQuickAddVisible, setIsQuickAddVisible] = useState(true);
   const [paymentType, setPaymentType] = useState('cash');
@@ -144,6 +145,7 @@ const Home = () => {
         lastCashLogDate: new Date(data2.lastCashLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
         lastDebitLogDate: new Date(data2.lastDebitLogDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
       });
+      
   
       // Convert category and bank fields to match UI shape
       const transformed = data.map((txn) => ({
@@ -192,19 +194,21 @@ const handleCategorySelect = (categoryId) => {
 
   useEffect(() => {
     const checkUser = async () => {
-      try {
-        const user = await authService.getCurrentUser();
-        if (!user) {
-          navigate('/');
-        } else {
-          await fetchExpenses(); // 🔁 Fetch on load
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
+      const currentUser = await authService.getCurrentUser();
+      if (!currentUser) {
         navigate('/');
+      } else {
+        console.log(currentUser);
+        setUser({
+          user_id: currentUser.$id,
+          username: currentUser.name,
+          mobile: currentUser.email.split('@')[0]
+        });
+        console.log(user);
+        await fetchExpenses();
       }
     };
-  
+    
     checkUser();
   }, []);
 

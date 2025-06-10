@@ -6,8 +6,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronUp, faChevronDown, faHome, faUsers, faChartBar } from '@fortawesome/free-solid-svg-icons';
 import { backendUrl } from '../config';
 import authService from '../appwrite/auth';
+import { useAuth } from '../context';
 
 const App = () => {
+  const { user, setUser } = useAuth();
   // State for family members
   const [isLoading, setIsLoading] = useState(true);
   const [familyMembers, setFamilyMembers] = useState([
@@ -192,18 +194,16 @@ const App = () => {
     });
   };
 
-useEffect(() => {
-  const user = authService.getCurrentUser();
-  if (user) {
-    console.log("user", user);
-    setUserProfile({
-      name: user.name,
-      phone: user.phone,
-      email: user.email,
+  useEffect(() => {
+    if (user) {
+      console.log("user", user);
+      setUserProfile({
+        name: user.username,
+        phone: user.mobile,
+        avatar:'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%20person%20with%20neutral%20expression%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography%2C%20centered%20composition&width=100&height=100&seq=6&orientation=squarish'
+      });
     }
-  );
-  }
-}, []);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -231,11 +231,15 @@ useEffect(() => {
         <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
           <div className="flex items-center">
             <div className="relative">
-              <img 
-                src={userProfile.avatar} 
-                alt={userProfile.name} 
-                className="w-16 h-16 rounded-full object-cover border-2 border-blue-100"
-              />
+                   <img 
+                      src={userProfile.avatar || 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%20person%20with%20neutral%20expression%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography%2C%20centered%20composition&width=100&height=100&seq=6&orientation=squarish'}
+                      alt={userProfile.name} 
+                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-100"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%20person%20with%20neutral%20expression%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography%2C%20centered%20composition&width=100&height=100&seq=6&orientation=squarish';
+                      }}
+                    />
               {/* <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                 {userProfile.credits}
               </div> */}
