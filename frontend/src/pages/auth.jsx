@@ -17,6 +17,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
 
 
@@ -40,14 +41,19 @@ const Auth = () => {
     setIsLoading(true);
     // Login logic would be implemented here
 
-    const response = await authService.login({
-      email: mobileNumber + '@dailyspend.com',
-      password: password
-    });
-
-    console.log('Login with:', response);
-    navigate('/home');
-    setIsLoading(false);
+    try {
+      const response = await authService.login({
+        email: mobileNumber + '@dailyspend.com',
+        password: password
+      });
+  
+      console.log('Login with:', response);
+      navigate('/home');
+      setIsLoading(false);
+    } catch (error) {
+      setError(error.message);
+      setIsLoading(false);
+    }
   };
 
   const handleRegister = async (e) => {
@@ -55,38 +61,43 @@ const Auth = () => {
     setIsLoading(true);
     // Registration logic would be implemented here
 
-   const response = await authService.createAccount({
-      email: mobileNumber + '@dailyspend.com',
-      password: password,
-      name: username
-    });
-
-    const res = await fetch(`${backendUrl}/registrationdata`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: username,
-        email: mobileNumber + '@dailyspend.com',
-        password: password,
-        appwrite_id: response.userId
-      })
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      console.error('Error registering user:', errorData);
-      setIsLoading(false);
-      return;
-    }
-    const responseData = await res.json();
-    console.log('User registered:', responseData);
-    // Assuming the registration was successful, navigate to home
-
-    console.log('Register with:', response);
-    navigate('/home');
+   try {
+    const response = await authService.createAccount({
+       email: mobileNumber + '@dailyspend.com',
+       password: password,
+       name: username
+     });
+ 
+     const res = await fetch(`${backendUrl}/registrationdata`, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+       },
+       body: JSON.stringify({
+         username: username,
+         email: mobileNumber + '@dailyspend.com',
+         password: password,
+         appwrite_id: response.userId
+       })
+     });
+ 
+     if (!res.ok) {
+       const errorData = await res.json();
+       console.error('Error registering user:', errorData);
+       setIsLoading(false);
+       return;
+     }
+     const responseData = await res.json();
+     console.log('User registered:', responseData);
+     // Assuming the registration was successful, navigate to home
+ 
+     console.log('Register with:', response);
+     navigate('/home');
+     setIsLoading(false);
+   } catch (error) {
+    setError(error.message);
     setIsLoading(false);
+   }
   };
 
   const getPasswordStrength = () => {
@@ -106,6 +117,7 @@ const Auth = () => {
 
   useEffect(() => {
     const checkUser = async () => {
+      setIsLoading(true);
         try {
             const user = await authService.getCurrentUser();
             if (user) {
@@ -113,16 +125,59 @@ const Auth = () => {
                 console.log('user', user);
             }
         } catch (error) {
-            console.error('Error checking user:', error);
+          setIsLoading(false);
+        } finally {
+            setIsLoading(false);
         }
     };
     
     checkUser();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-black bg-opacity-30 backdrop-blur-sm">
+  <div className="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-700 text-lg">Loading...</p>
+  </div>
+</div>
+    );
+  }
+
+  const ErrorPopup = ({ message, onClose }) => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-lg font-semibold text-red-600">Error</h3>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+          </div>
+          <p className="text-gray-700 mb-4">{message}</p>
+          <button
+            onClick={onClose}
+            className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {error && (
+      <ErrorPopup 
+        message={error}
+        onClose={() => setError(null)}
+      />
+    )}
       {/* Nav Bar */}
       <div className="fixed top-0 w-full bg-white shadow-md z-10 px-4 py-3 flex items-center justify-center">
         <h1 className="text-xl font-semibold text-blue-600">DailySpend</h1>

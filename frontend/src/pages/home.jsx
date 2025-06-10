@@ -5,6 +5,7 @@ import authService from '../appwrite/auth';
 import { useNavigate } from 'react-router-dom';
 import { backendUrl } from '../config'; 
 
+
 const Home = () => {
   const navigate = useNavigate();
   // State for expense form
@@ -16,6 +17,7 @@ const Home = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [summary, setSummary] = useState({
     cashTotal: 0,
     debitTotal: 0,
@@ -28,11 +30,11 @@ const Home = () => {
   const categories = [
     { id: 'milk', emoji: '🥛', name: 'Milk' },
     { id: 'grocery', emoji: '🛒', name: 'Grocery' },
-    { id: 'fastfood', emoji: '🍔', name: 'Fast Food' },
+    { id: 'petrol', emoji: '🚗', name: 'Petrol' },
     { id: 'bread', emoji: '🍞', name: 'Bread' },
     { id: 'veggies', emoji: '🥦', name: 'Veggies' },
     { id: 'travel', emoji: '🚕', name: 'Travel' },
-    { id: 'bills', emoji: '📝', name: 'Bills' },
+    { id: 'phonepe', emoji: '📱', name: 'PhonePe' },
     { id: 'health', emoji: '💊', name: 'Health' },
   ];
 
@@ -44,63 +46,6 @@ const Home = () => {
     { id: 'axis', emoji: '🏤', name: 'Axis' },
   ];
 
-  // Sample expense data
-  // const expenses = [
-  //   {
-  //     id: 1,
-  //     date: 'June 7, 2025 • 10:30 AM',
-  //     amount: 120,
-  //     category: { id: 'milk', emoji: '🥛', name: 'Milk' },
-  //     paymentType: 'cash',
-  //     bank: null,
-  //     user: 'John'
-  //   },
-  //   {
-  //     id: 2,
-  //     date: 'June 6, 2025 • 2:15 PM',
-  //     amount: 450,
-  //     category: { id: 'grocery', emoji: '🛒', name: 'Grocery' },
-  //     paymentType: 'debit',
-  //     bank: { id: 'hdfc', emoji: '💳', name: 'HDFC' },
-  //     user: 'Sarah'
-  //   },
-  //   {
-  //     id: 3,
-  //     date: 'June 6, 2025 • 11:45 AM',
-  //     amount: 250,
-  //     category: { id: 'fastfood', emoji: '🍔', name: 'Fast Food' },
-  //     paymentType: 'cash',
-  //     bank: null,
-  //     user: 'Michael'
-  //   },
-  //   {
-  //     id: 4,
-  //     date: 'June 5, 2025 • 6:20 PM',
-  //     amount: 80,
-  //     category: { id: 'bread', emoji: '🍞', name: 'Bread' },
-  //     paymentType: 'cash',
-  //     bank: null,
-  //     user: 'Emily'
-  //   },
-  //   {
-  //     id: 5,
-  //     date: 'June 5, 2025 • 4:10 PM',
-  //     amount: 350,
-  //     category: { id: 'veggies', emoji: '🥦', name: 'Veggies' },
-  //     paymentType: 'debit',
-  //     bank: { id: 'sbi', emoji: '🏦', name: 'SBI' },
-  //     user: 'David'
-  //   },
-  //   {
-  //     id: 6,
-  //     date: 'June 4, 2025 • 9:30 AM',
-  //     amount: 500,
-  //     category: { id: 'travel', emoji: '🚕', name: 'Travel' },
-  //     paymentType: 'debit',
-  //     bank: { id: 'icici', emoji: '🏛️', name: 'ICICI' },
-  //     user: 'Jessica'
-  //   },
-  // ];
 
   // Filter options
   const filterOptions = ['All', 'Cash', 'Debit', 'Today', 'This Week'];
@@ -108,6 +53,7 @@ const Home = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsUpdating(true);
     
     if (!amount || !selectedCategory) {
       alert('Please fill all required fields');
@@ -132,25 +78,38 @@ const Home = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${await authService.getJWT()}`
         },
         body: JSON.stringify(transaction)
       });
   
       if (!response.ok) throw new Error('Failed to add transaction');
   
+      // Add new transaction to expenses UI
+      setExpenses([ {
+        id: response.id,
+        date: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        amount: transaction.amount,
+        category: {
+          id: selectedCategory,
+          name: selectedCategory,
+          emoji: '📝'
+        },
+        paymentType: transaction.payment_type,
+        bank: transaction.bank ? banks.find((b) => b.id === transaction.bank) : null,
+        user: 'You' 
+      }, ...expenses]);
+      
+      
       // Reset form
       setAmount('');
       setSelectedCategory('');
       setSelectedBank('');
-      
-      // Refresh expenses list
-      // You'll need to implement fetchExpenses() function
-      // await fetchExpenses();
   
     } catch (error) {
       console.error('Error adding transaction:', error);
       alert('Failed to add expense. Please try again.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -224,7 +183,15 @@ const Home = () => {
   
     checkUser();
   }, []);
-  
+
+  if (isUpdating) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white bg-opacity-90 z-50">
+               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+               <p className="text-gray-700 text-lg mt-4">Updating...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 max-w-[400px] mx-auto relative">
