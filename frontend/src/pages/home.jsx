@@ -15,11 +15,12 @@ const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  const [selectedBankFilter, setSelectedBankFilter] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [otherCategory, setOtherCategory] = useState('');
-  const [summary, setSummary] = useState({
+    const [summary, setSummary] = useState({
     cashTotal: 0,
     debitTotal: 0,
     lastCashLogDate: null,
@@ -43,13 +44,13 @@ const Home = () => {
   const banks = [
     { id: 'sbi', emoji: '🏦', name: 'SBI' },
     { id: 'icici', emoji: '🏛️', name: 'ICICI' },
-    { id: 'hdfc', emoji: '💳', name: 'HDFC' },
+    { id: 'bom', emoji: '🏦', name: 'BOM' },
     { id: 'axis', emoji: '🏤', name: 'Axis' },
   ];
 
 
   // Filter options
-  const filterOptions = ['All', 'Cash', 'Debit', 'Today', 'This Week'];
+  const filterOptions = ['All', 'Cash', 'Debit', 'PhonePe'];
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -176,7 +177,18 @@ const handleCategorySelect = (categoryId) => {
     setPaymentType('cash');
   }
  };
+
+ const filteredExpenses = expenses.filter((expense) => {
+  // Filter by payment type
+  if (activeFilter === 'Cash' && expense.paymentType !== 'cash') return false;
+  if (activeFilter === 'Debit' && expense.paymentType !== 'debit') return false;
+  if (activeFilter === 'PhonePe' && expense.paymentType !== 'phonepe') return false;
   
+  // Filter by bank if a bank is selected
+  if (selectedBankFilter && expense.bank?.id !== selectedBankFilter) return false;
+  
+  return true;
+});
 
   useEffect(() => {
     const checkUser = async () => {
@@ -320,23 +332,47 @@ const handleCategorySelect = (categoryId) => {
       {/* Expense Log */}
       <div className="flex-1 overflow-y-auto pb-32">
         {/* Filter options */}
-        {/* <div className="px-4 py-3 sticky top-0 bg-gray-50 z-10 border-b">
-          <div className="flex overflow-x-auto space-x-2 pb-1 -mx-1 px-1">
-            {filterOptions.map((filter) => (
-              <button
-                key={filter}
-                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap cursor-pointer !rounded-button ${
-                  activeFilter === filter
-                    ? 'bg-blue-100 text-blue-600 border border-blue-200'
-                    : 'bg-white text-gray-600 border border-gray-200'
-                }`}
-                onClick={() => setActiveFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-        </div> */}
+        <div className="px-4 py-3 sticky top-0 bg-gray-50 z-10 border-b">
+  <div className="flex overflow-x-auto space-x-2 pb-1 -mx-1 px-1">
+    {filterOptions.map((filter) => (
+      <button
+        key={filter}
+        className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap cursor-pointer !rounded-button ${
+          activeFilter === filter
+            ? 'bg-blue-100 text-blue-600 border border-blue-200'
+            : 'bg-white text-gray-600 border border-gray-200'
+        }`}
+        onClick={() => {
+          setActiveFilter(filter);
+          setSelectedBankFilter(null); // Reset bank filter when changing payment type
+        }}
+      >
+        {filter === 'PhonePe' ? '📱 PhonePe' : filter}
+      </button>
+    ))}
+  </div>
+  
+  {/* Show bank filters when Debit or PhonePe is selected */}
+  {(activeFilter === 'Debit' || activeFilter === 'PhonePe') && (
+    <div className="flex overflow-x-auto space-x-2 pt-2 -mx-1 px-1">
+      {banks.map((bank) => (
+        <button
+          key={bank.id}
+          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap cursor-pointer !rounded-button ${
+            selectedBankFilter === bank.id
+              ? 'bg-blue-100 text-blue-600 border border-blue-200'
+              : 'bg-white text-gray-600 border border-gray-200'
+          }`}
+          onClick={() => setSelectedBankFilter(
+            selectedBankFilter === bank.id ? null : bank.id
+          )}
+        >
+          {bank.emoji} {bank.name}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
         {/* Expense list */}
         <div className="divide-y divide-gray-100">
           {isLoading && (
@@ -345,7 +381,7 @@ const handleCategorySelect = (categoryId) => {
             </div>
           )}
 
-{expenses.map((expense) => (
+{filteredExpenses.map((expense) => (
   <div key={expense.id} className="p-4 bg-white"> {/* Add key here */}
     <div className="flex justify-between items-start mb-1">
       <span className="text-xs text-gray-500">{expense.date}</span>
@@ -365,7 +401,8 @@ const handleCategorySelect = (categoryId) => {
       <span className="text-xs text-gray-500">👤 {expense.user}</span>
     </div>
   </div>
-))}
+))
+}
         </div>
             </div>
             {/* Spending Summary */}
