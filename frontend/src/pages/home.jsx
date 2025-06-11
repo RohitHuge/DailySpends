@@ -3,12 +3,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronUp, faChevronDown, faHome, faUsers, faChartBar } from '@fortawesome/free-solid-svg-icons';
 import authService from '../appwrite/auth';
 import { useNavigate } from 'react-router-dom';
-import { backendUrl } from '../config'; 
+import { backendUrl, appwriteProjectId, appwriteProjectEndpoint } from '../config'; 
 import { useAuth } from '../context';
+import FamilySetupModal from '../../component/familymodal.jsx';
+import { Client, Account } from "appwrite";
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user, setUser } = useAuth();
+  const { user, setUser, userData, setUserData } = useAuth();
   // State for expense form
   const [isQuickAddVisible, setIsQuickAddVisible] = useState(true);
   const [paymentType, setPaymentType] = useState('cash');
@@ -20,6 +22,7 @@ const Home = () => {
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isFamily, setIsFamily] = useState(false);
   const [otherCategory, setOtherCategory] = useState('');
     const [summary, setSummary] = useState({
     cashTotal: 0,
@@ -180,7 +183,7 @@ const handleCategorySelect = (categoryId) => {
   }
  };
 
- const filteredExpenses = expenses.filter((expense) => {
+const filteredExpenses = expenses.filter((expense) => {
   // Filter by payment type
   if (activeFilter === 'Cash' && expense.paymentType !== 'cash') return false;
   if (activeFilter === 'Debit' && expense.paymentType !== 'debit') return false;
@@ -192,25 +195,136 @@ const handleCategorySelect = (categoryId) => {
   return true;
 });
 
+const onCreateFamily = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${backendUrl}/createfamily`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ user_id: user.user_id })
+    });
+    if (!response.ok) throw new Error('Failed to create family');
+    const data = await response.json();
+    
+    // Update user preferences using the account service
+    const client = new Client()
+      .setEndpoint(appwriteProjectEndpoint)
+      .setProject(appwriteProjectId);
+    const account = new Account(client);
+    
+    await account.updatePrefs({
+      family_id: data.family_id,
+      role: "admin"
+    });
+
+    setUserData({
+      family_id: data.family_id,
+      role: "admin"
+    });
+    setIsFamily(true);
+    await fetchExpenses();
+  } catch (error) {
+    console.error('Error creating family:', error);
+    alert('Failed to create family. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}
+
+const onCheckForInvite = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${backendUrl}/checkforinvite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ user_id: user.user_id })
+    });
+    if (!response.ok) throw new Error('Failed to check for invite');
+    const data = await response.json();
+    
+    if (data) {
+      // Update user preferences using the account service
+      const client = new Client()
+        .setEndpoint(appwriteProjectEndpoint)
+        .setProject(appwriteProjectId);
+      const account = new Account(client);
+      
+      await account.updatePrefs({
+        family_id: data.family_id,
+        role: "member"
+      });
+
+      setUserData({
+        family_id: data.family_id,
+        role: "member"
+      });
+      
+      await fetchExpenses();
+      
+      const response2 = await fetch(`${backendUrl}/deleteinvite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: user.user_id })
+      });
+      if (response2.ok) {
+        alert('Invite accepted');
+        setIsFamily(true);
+      } else {
+        throw new Error('Failed to delete invite');
+      }
+    } else {
+      setIsFamily(false);
+      alert('No invite found');
+    }
+  } catch (error) {
+    console.error('Error checking for invite:', error);
+    alert('Failed to check for invite. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}
+
   useEffect(() => {
     const checkUser = async () => {
       const currentUser = await authService.getCurrentUser();
       if (!currentUser) {
         navigate('/');
       } else {
-        console.log(currentUser);
-        setUser({
+        await setUser({
           user_id: currentUser.$id,
           username: currentUser.name,
           mobile: currentUser.email.split('@')[0]
         });
-        console.log(user);
-        await fetchExpenses();
+
+        const currentUserData = currentUser.prefs
+        console.log(currentUserData);
+        if(currentUserData.family_id) {
+          setUserData({
+            family_id: currentUserData.family_id,
+            role: currentUserData.role
+          })
+          setIsFamily(true);
+          await fetchExpenses();
+        } else {
+          setIsFamily(false);
+        }
       }
     };
     
     checkUser();
   }, []);
+
+  if(!isFamily) {
+    return (
+      <FamilySetupModal onCreateFamily={onCreateFamily} onCheckForInvite={onCheckForInvite} />
+    );
+  }
 
   if (isUpdating) {
     return (

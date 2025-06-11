@@ -10,8 +10,13 @@ export const AuthProvider = ({ children }) => {
         mobile : ''
     });
 
+    const [userData, setUserData] = useState({
+        family_id : '',
+        role : ''
+    })
+
     return ( 
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, userData, setUserData }}>
         {children}
         </AuthContext.Provider>
     )

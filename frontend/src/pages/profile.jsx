@@ -9,47 +9,10 @@ import authService from '../appwrite/auth';
 import { useAuth } from '../context';
 
 const App = () => {
-  const { user, setUser } = useAuth();
+  const { user, setUser, userData, setUserData } = useAuth();
   // State for family members
   const [isLoading, setIsLoading] = useState(true);
-  const [familyMembers, setFamilyMembers] = useState([
-    {
-      id: 1,
-      name: 'William Thompson',
-      role: 'Admin',
-      avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%2035%20year%20old%20caucasian%20man%20with%20short%20brown%20hair%20and%20blue%20eyes%2C%20smiling%20at%20camera%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography&width=100&height=100&seq=1&orientation=squarish',
-      spending: { cash: 1250, debit: 2340 },
-      lastActive: '2 hours ago',
-      permissions: ['view', 'add', 'edit', 'delete']
-    },
-    {
-      id: 2,
-      name: 'Emma Johnson',
-      role: 'Member',
-      avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%2030%20year%20old%20caucasian%20woman%20with%20blonde%20hair%20and%20green%20eyes%2C%20smiling%20at%20camera%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography&width=100&height=100&seq=2&orientation=squarish',
-      spending: { cash: 850, debit: 1120 },
-      lastActive: '1 day ago',
-      permissions: ['view', 'add']
-    },
-    {
-      id: 3,
-      name: 'Michael Rodriguez',
-      role: 'Member',
-      avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%2028%20year%20old%20hispanic%20man%20with%20dark%20hair%20and%20brown%20eyes%2C%20smiling%20at%20camera%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography&width=100&height=100&seq=3&orientation=squarish',
-      spending: { cash: 620, debit: 980 },
-      lastActive: '3 days ago',
-      permissions: ['view']
-    },
-    {
-      id: 4,
-      name: 'Sophia Chen',
-      role: 'Member',
-      avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%2025%20year%20old%20asian%20woman%20with%20long%20black%20hair%20and%20brown%20eyes%2C%20smiling%20at%20camera%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography&width=100&height=100&seq=4&orientation=squarish',
-      spending: { cash: 430, debit: 1560 },
-      lastActive: '5 hours ago',
-      permissions: ['view', 'add']
-    }
-  ]);
+  const [familyMembers, setFamilyMembers] = useState([]);
 
   // State for user profile
   const [userProfile, setUserProfile] = useState({
@@ -108,30 +71,53 @@ const App = () => {
   };
 
   // Handle add new member
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (newMember.name.trim() === '') {
       alert('Please enter a name for the new member');
       return;
     }
     
-    const newMemberId = Math.max(...familyMembers.map(m => m.id)) + 1;
-    const memberToAdd = {
-      id: newMemberId,
-      name: newMember.name,
-      role: newMember.role,
-      avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%20person%20with%20neutral%20expression%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography%2C%20centered%20composition&width=100&height=100&seq=6&orientation=squarish',
-      spending: { cash: 0, debit: 0 },
-      lastActive: 'Just now',
-      permissions: newMember.permissions
-    };
-    
-    setFamilyMembers([...familyMembers, memberToAdd]);
-    setNewMember({
-      name: '',
-      role: 'Member',
-      permissions: ['view']
-    });
-    setIsAddingMember(false);
+    try {
+      const response = await fetch(`${backendUrl}/addmember`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phone: newMember.name,
+          family_id: userData.family_id
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add member');
+      }
+      
+      const memberToAdd = await response.json();
+      console.log(memberToAdd);
+      
+      const member = {
+        id: memberToAdd.appwrite_id,
+        name: memberToAdd.username,
+        role: "member",
+        avatar: 'https://readdy.ai/api/search-image?query=professional%20headshot%20portrait%20of%20a%20person%20with%20neutral%20expression%2C%20high%20quality%20photorealistic%20image%2C%20soft%20studio%20lighting%2C%20clean%20background%2C%20professional%20photography%2C%20centered%20composition&width=100&height=100&seq=6&orientation=squarish',
+        spending: { cash: 0, debit: 0 },
+        lastActive: 'Never',
+        permissions: ['view']
+      };
+      
+      setFamilyMembers([...familyMembers, member]);
+      setIsAddingMember(false);
+      setNewMember({
+        name: '',
+        role: 'Member',
+        permissions: ['view']
+      });
+    } catch (error) {
+      console.error('Error adding member:', error);
+      alert(error.message || 'Failed to add member. Please try again.');
+    }
   };
 
   // Handle edit member
@@ -260,7 +246,7 @@ const App = () => {
         </div>
 
         {/* Family Members Section */}
-        {/* <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
           <div className="flex justify-between items-center p-4 border-b">
             <h2 className="font-semibold text-gray-800">Family Members</h2>
             <button 
@@ -408,7 +394,7 @@ const App = () => {
               </div>
             ))}
           </div>
-        </div> */}
+        </div>
 
         {/* Add New Member Form */}
         {isAddingMember && (
@@ -420,7 +406,7 @@ const App = () => {
                 value={newMember.name}
                 onChange={(e) => setNewMember({...newMember, name: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                placeholder="Member name"
+                placeholder="Enter Member Phone Number"
               />
               <div className="flex space-x-2">
                 <select
@@ -428,11 +414,11 @@ const App = () => {
                   onChange={(e) => setNewMember({...newMember, role: e.target.value})}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
                 >
-                  <option value="Admin">Admin</option>
+                  {/* <option value="Admin">Admin</option> */}
                   <option value="Member">Member</option>
                 </select>
               </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
+              {/* <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Permissions:</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {['view', 'add', 'edit', 'delete'].map(perm => (
@@ -450,7 +436,7 @@ const App = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> */}
               <div className="flex space-x-2 mt-2">
                 <button
                   onClick={handleAddMember}
